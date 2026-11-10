@@ -215,6 +215,11 @@ class Game(tk.Frame):
     def setup_game(self):
         self.add_ball()
         self.update_hud()
+        
+        # FIX: Hapus teks lama di layar (seperti 'Level Unlocked') jika ada
+        if hasattr(self, 'text'):
+            self.canvas.delete(self.text)
+            
         self.text = self.draw_text(self.width/2, 200, 'Press Space to Start', '30', 'white')
         self.canvas.bind('<space>', lambda _: self.start_game())
 
@@ -263,8 +268,13 @@ class Game(tk.Frame):
             # LANJUT KE LEVEL BERIKUTNYA
             self.ball.speed = None
             self.level += 1
-            self.save_high_score() # Save score tiap kali menang level
-            self.draw_text(self.width/2, 200, f'Level {self.level} Unlocked!', '35', '#2ecc71')
+            self.save_high_score() 
+            
+            # FIX: Hapus teks lama dan simpan teks baru ke self.text
+            if hasattr(self, 'text'):
+                self.canvas.delete(self.text)
+            self.text = self.draw_text(self.width/2, 200, f'Level {self.level} Unlocked!', '35', '#2ecc71')
+            
             self.after(2000, self.setup_level)
             self.after(2000, self.setup_game)
         
@@ -276,7 +286,12 @@ class Game(tk.Frame):
             
             if self.lives < 0:
                 # GAME OVER
-                self.save_high_score() # Save skor terakhir
+                self.save_high_score()
+                
+                # Bersihkan layar sebelum memunculkan Game Over
+                if hasattr(self, 'text'):
+                    self.canvas.delete(self.text)
+                    
                 self.draw_text(self.width/2, 180, 'GAME OVER', '40', '#e74c3c')
                 self.draw_text(self.width/2, 230, f'Your Score: {self.score}', '20', 'white')
                 self.draw_text(self.width/2, 260, f'Highest Score: {self.high_score}', '20', '#f1c40f')

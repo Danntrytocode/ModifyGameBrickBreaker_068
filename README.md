@@ -13,7 +13,7 @@ Game ini telah dimodifikasi secara signifikan dari *source code* aslinya.
 *   **Optimasi Memori (Memory Cleanup):** Menutup celah kebocoran memori (memory leak) dengan memastikan objek balok yang hancur dihapus sepenuhnya dari *dictionary* penyimpanan sistem.
 
 ## 🎮 Cara Bermain
-1.  Jalankan file Python utama (`Modified.py` atau nama file Anda).
+1.  Jalankan file Python utama (`Modified.py`).
 2.  Tekan tombol **[Space]** untuk melepaskan bola dan memulai permainan.
 3.  Gunakan tombol **[Panah Kiri]** dan **[Panah Kanan]** di *keyboard* untuk menggerakkan papan.
 4.  Pantulkan bola untuk menghancurkan semua balok dan melaju ke level berikutnya! Tangkap kapsul biru yang jatuh untuk memperkuat bola Anda.

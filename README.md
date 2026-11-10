@@ -2,7 +2,7 @@
 
 **Pro Breakout** adalah game klasik pemecah balok (*brick breaker*) yang dibangun murni menggunakan Python dan pustaka antarmuka grafis Tkinter. Versi "Minimalist Edition" ini merupakan perombakan total dari versi dasar, dirancang ulang untuk memberikan pengalaman bermain yang lebih modern, mulus, dan menantang. 
 
-![Screenshot Gameplay Pro Breakout Level 2](image_d69571.png)
+![Screenshot Gameplay Pro Breakout Level 2](1.png)
 
 ## ✨ Apa Saja yang Baru (Fitur Modifikasi)
 

@@ -1,5 +1,6 @@
 import tkinter as tk
 import os
+import random
 
 class GameObject(object):
     def __init__(self, canvas, item):
@@ -16,15 +17,55 @@ class GameObject(object):
         self.canvas.delete(self.item)
 
 
-class Ball(GameObject):
+class PowerUp(GameObject):
     def __init__(self, canvas, x, y):
-        self.radius = 10
-        self.direction = [1, -1]
-        self.speed = 10 # Kecepatan bola
+        self.radius = 8
+        self.speed = 5
+        # Kapsul power-up berwarna biru neon
         item = canvas.create_oval(x-self.radius, y-self.radius,
                                   x+self.radius, y+self.radius,
-                                  fill='white', outline='white')
+                                  fill='#00f0ff', outline='', tags='powerup')
+        super(PowerUp, self).__init__(canvas, item)
+
+    def update(self):
+        self.move(0, self.speed)
+
+
+class Ball(GameObject):
+    def __init__(self, canvas, x, y):
+        self.base_radius = 10
+        self.radius = self.base_radius
+        self.direction = [1, -1]
+        self.speed = 10
+        self.damage = 1
+        item = canvas.create_oval(x-self.radius, y-self.radius,
+                                  x+self.radius, y+self.radius,
+                                  fill='#eceff4', outline='', tags='ball')
         super(Ball, self).__init__(canvas, item)
+
+    def make_super(self):
+        """Memperbesar bola dan menaikkan damage menjadi 2"""
+        self.damage = 2
+        self.radius = 16
+        coords = self.get_position()
+        center_x = (coords[0] + coords[2]) / 2
+        center_y = (coords[1] + coords[3]) / 2
+        self.canvas.coords(self.item, 
+                           center_x-self.radius, center_y-self.radius, 
+                           center_x+self.radius, center_y+self.radius)
+        self.canvas.itemconfig(self.item, fill='#ff4a4a') # Merah menyala
+
+    def reset_super(self):
+        """Mengembalikan bola ke ukuran dan damage normal"""
+        self.damage = 1
+        self.radius = self.base_radius
+        coords = self.get_position()
+        center_x = (coords[0] + coords[2]) / 2
+        center_y = (coords[1] + coords[3]) / 2
+        self.canvas.coords(self.item, 
+                           center_x-self.radius, center_y-self.radius, 
+                           center_x+self.radius, center_y+self.radius)
+        self.canvas.itemconfig(self.item, fill='#eceff4')
 
     def update(self):
         coords = self.get_position()
@@ -44,29 +85,28 @@ class Ball(GameObject):
             self.direction[1] *= -1
         elif len(game_objects) == 1:
             game_object = game_objects[0]
-            coords = game_object.get_position()
-            if x > coords[2]:
+            if isinstance(game_object, PowerUp):
+                return # Jangan mantul kalau nabrak powerup
+            
+            b_coords = game_object.get_position()
+            if x > b_coords[2]:
                 self.direction[0] = 1
-            elif x < coords[0]:
+            elif x < b_coords[0]:
                 self.direction[0] = -1
             else:
                 self.direction[1] *= -1
 
-        for game_object in game_objects:
-            if isinstance(game_object, Brick):
-                game_object.hit()
-
 
 class Paddle(GameObject):
     def __init__(self, canvas, x, y):
-        self.width = 120 # Diperlebar agar lebih nyaman memantulkan bola
+        self.width = 140 # Papan lebih panjang karena layar melebar
         self.height = 12
         self.ball = None
         item = canvas.create_rectangle(x - self.width / 2,
                                        y - self.height / 2,
                                        x + self.width / 2,
                                        y + self.height / 2,
-                                       fill='#f1c40f', outline='#f39c12')
+                                       fill='#88c0d0', outline='', tags='paddle')
         super(Paddle, self).__init__(canvas, item)
 
     def set_ball(self, ball):
@@ -82,29 +122,30 @@ class Paddle(GameObject):
 
 
 class Brick(GameObject):
-    # Skor dan warna bata: 1=Merah, 2=Biru, 3=Ungu/Keras
-    COLORS = {1: '#e74c3c', 2: '#3498db', 3: '#8e44ad'}
+    # Tema Minimalis Pastel: 1=Hijau Mint, 2=Kuning Pasir, 3=Merah Coral
+    COLORS = {1: '#a3be8c', 2: '#ebcb8b', 3: '#bf616a'}
 
     def __init__(self, canvas, x, y, hits):
-        self.width = 75
-        self.height = 20
+        self.width = 80 # Sedikit diperlebar
+        self.height = 25
         self.hits = hits
-        self.points = hits * 10  # Poin berdasarkan ketebalan bata
-        color = Brick.COLORS[hits]
+        self.points = hits * 10
+        color = Brick.COLORS.get(hits, '#ffffff')
         item = canvas.create_rectangle(x - self.width / 2,
                                        y - self.height / 2,
                                        x + self.width / 2,
                                        y + self.height / 2,
-                                       fill=color, tags='brick')
+                                       fill=color, outline='', tags='brick')
         super(Brick, self).__init__(canvas, item)
 
-    def hit(self):
-        self.hits -= 1
-        if self.hits == 0:
+    def hit(self, damage):
+        self.hits -= damage
+        if self.hits <= 0:
             self.delete()
+            return True # Tanda bata hancur
         else:
-            self.canvas.itemconfig(self.item,
-                                   fill=Brick.COLORS[self.hits])
+            self.canvas.itemconfig(self.item, fill=Brick.COLORS.get(self.hits, '#ffffff'))
+            return False
 
 
 class Game(tk.Frame):
@@ -112,23 +153,25 @@ class Game(tk.Frame):
         super(Game, self).__init__(master)
         self.lives = 3
         self.score = 0
-        self.high_score = self.load_high_score() # Load highest score
+        self.high_score = self.load_high_score()
         self.level = 1
-        self.width = 610
-        self.height = 400
-        self.canvas = tk.Canvas(self, bg='#1a2634', # Warna background gelap (Dark Navy)
-                                width=self.width,
-                                height=self.height)
+        
+        # Jendela dibuat lebih lebar dan luas
+        self.width = 900
+        self.height = 600
+        
+        # Tema Minimalis (Background gelap yang elegan)
+        self.canvas = tk.Canvas(self, bg='#1e1e2e', width=self.width, height=self.height)
         self.canvas.pack()
         self.pack()
 
         self.items = {}
+        self.powerups = [] # Menyimpan item jatuhan
         self.ball = None
-        self.paddle = Paddle(self.canvas, self.width/2, 350)
+        self.paddle = Paddle(self.canvas, self.width/2, 540)
         self.items[self.paddle.item] = self.paddle
         self.hud = None
         
-        # Deteksi pergerakan tombol agar sangat smooth
         self.pressed_keys = {'Left': False, 'Right': False}
         self.canvas.focus_set()
         
@@ -140,14 +183,13 @@ class Game(tk.Frame):
         self.setup_level()
         self.setup_game()
 
-    # --- SISTEM HIGHEST SCORE (MENYIMPAN KE FILE) ---
     def load_high_score(self):
         if os.path.exists("highscore.txt"):
             with open("highscore.txt", "r") as f:
                 try:
                     return int(f.read())
                 except:
-                    return 0
+                    pass
         return 0
 
     def save_high_score(self):
@@ -155,23 +197,31 @@ class Game(tk.Frame):
             self.high_score = self.score
             with open("highscore.txt", "w") as f:
                 f.write(str(self.high_score))
-    # ------------------------------------------------
+
+    def trigger_shake(self, count=4):
+        """Efek getaran layar yang dinamis dan memuaskan"""
+        if count > 0:
+            dx = random.choice([-5, -3, 3, 5])
+            dy = random.choice([-5, -3, 3, 5])
+            self.canvas.move('all', dx, dy)
+            self.after(20, lambda: self.canvas.move('all', -dx, -dy))
+            self.after(40, lambda: self.trigger_shake(count-1))
 
     def generate_bricks(self):
         self.canvas.delete('brick')
+        self.canvas.delete('powerup')
+        self.powerups.clear()
+        
         items_to_remove = [k for k, v in self.items.items() if isinstance(v, Brick)]
         for k in items_to_remove:
             del self.items[k]
 
-        # DATABASE POLA BENTUK BLOK (0=Kosong, 1=Merah, 2=Biru, 3=Ungu)
         patterns = [
-            # LEVEL 1: Papan Catur (Checkerboard)
             [
-                [1, 2, 1, 2, 1, 2, 1],
-                [2, 1, 2, 1, 2, 1, 2],
-                [1, 2, 1, 2, 1, 2, 1]
+                [1, 2, 1, 2, 1, 2, 1, 2, 1],
+                [2, 1, 2, 1, 2, 1, 2, 1, 2],
+                [1, 2, 1, 2, 1, 2, 1, 2, 1]
             ],
-            # LEVEL 2: Pola Monster (Space Invader)
             [
                 [0, 1, 0, 0, 0, 1, 0],
                 [0, 0, 1, 0, 1, 0, 0],
@@ -180,14 +230,13 @@ class Game(tk.Frame):
                 [1, 1, 1, 1, 1, 1, 1],
                 [1, 0, 1, 0, 1, 0, 1]
             ],
-            # LEVEL 3: Pola Segitiga (Pyramid)
             [
-                [0, 0, 0, 3, 0, 0, 0],
-                [0, 0, 2, 2, 2, 0, 0],
-                [0, 1, 1, 1, 1, 1, 0],
-                [1, 1, 1, 1, 1, 1, 1]
+                [0, 0, 0, 0, 3, 0, 0, 0, 0],
+                [0, 0, 0, 2, 2, 2, 0, 0, 0],
+                [0, 0, 1, 1, 1, 1, 1, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 0],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1]
             ],
-            # LEVEL 4: Pola Hati (Heart)
             [
                 [0, 2, 2, 0, 2, 2, 0],
                 [2, 1, 1, 2, 1, 1, 2],
@@ -198,16 +247,18 @@ class Game(tk.Frame):
             ]
         ]
 
-        # Menentukan pola berdasarkan level (akan berulang jika level > 4)
         current_pattern = patterns[(self.level - 1) % len(patterns)]
         
-        start_x = 75
-        start_y = 50
+        # Menghitung posisi agar tata letak otomatis ke tengah layar
+        brick_w, brick_h = 82, 27
+        row_width = len(current_pattern[0]) * brick_w
+        start_x = (self.width - row_width) / 2 + (brick_w / 2)
+        start_y = 70
+
         for r_idx, row in enumerate(current_pattern):
             for c_idx, val in enumerate(row):
                 if val > 0:
-                    # Jarak antar blok = 76px (horizontal), 22px (vertikal)
-                    self.add_brick(start_x + (c_idx * 76), start_y + (r_idx * 22), val)
+                    self.add_brick(start_x + (c_idx * brick_w), start_y + (r_idx * brick_h), val)
 
     def setup_level(self):
         self.generate_bricks()
@@ -215,12 +266,9 @@ class Game(tk.Frame):
     def setup_game(self):
         self.add_ball()
         self.update_hud()
-        
-        # FIX: Hapus teks lama di layar (seperti 'Level Unlocked') jika ada
         if hasattr(self, 'text'):
             self.canvas.delete(self.text)
-            
-        self.text = self.draw_text(self.width/2, 200, 'Press Space to Start', '30', 'white')
+        self.text = self.draw_text(self.width/2, 300, 'Press Space to Start', '30', '#cdd6f4')
         self.canvas.bind('<space>', lambda _: self.start_game())
 
     def add_ball(self):
@@ -228,7 +276,7 @@ class Game(tk.Frame):
             self.ball.delete()
         paddle_coords = self.paddle.get_position()
         x = (paddle_coords[0] + paddle_coords[2]) * 0.5
-        self.ball = Ball(self.canvas, x, 330)
+        self.ball = Ball(self.canvas, x, 520)
         self.paddle.set_ball(self.ball)
 
     def add_brick(self, x, y, hits):
@@ -236,14 +284,13 @@ class Game(tk.Frame):
         self.items[brick.item] = brick
 
     def draw_text(self, x, y, text, size='40', color='white'):
-        font = ('Helvetica', size, 'bold')
+        font = ('Segoe UI', size, 'bold')
         return self.canvas.create_text(x, y, text=text, font=font, fill=color)
 
     def update_hud(self):
-        # Update teks di layar termasuk Highest Score
-        text = f'❤ Lives: {self.lives}    🏆 Score: {self.score}    🥇 High Score: {self.high_score}    ⭐ Level: {self.level}'
+        text = f'❤ Lives: {self.lives}       🏆 Score: {self.score}       🥇 High Score: {self.high_score}       ⭐ Level: {self.level}'
         if self.hud is None:
-            self.hud = self.draw_text(self.width/2, 15, text, '12', '#00ffcc')
+            self.hud = self.draw_text(self.width/2, 25, text, '14', '#cdd6f4')
         else:
             self.canvas.itemconfig(self.hud, text=text)
 
@@ -254,47 +301,60 @@ class Game(tk.Frame):
         self.game_loop()
 
     def game_loop(self):
-        # KECEPATAN PADDLE DITINGKATKAN MENJADI 20 (Sangat responsif)
-        paddle_speed = 20
+        # Gerakan super responsif untuk ruangan yang luas
+        paddle_speed = 22
         if self.pressed_keys['Left']:
             self.paddle.move(-paddle_speed)
         if self.pressed_keys['Right']:
             self.paddle.move(paddle_speed)
 
+        # Proses pergerakan item Power-Up
+        for pu in self.powerups[:]:
+            pu.update()
+            p_coords = pu.get_position()
+            pad_coords = self.paddle.get_position()
+            
+            # Jika keluar batas bawah
+            if p_coords[3] >= self.height:
+                pu.delete()
+                self.powerups.remove(pu)
+            # Jika mengenai papan paddle
+            elif (pad_coords[0] < p_coords[2] and pad_coords[2] > p_coords[0] and
+                  pad_coords[1] < p_coords[3] and pad_coords[3] > p_coords[1]):
+                self.ball.make_super() # Aktifkan efek super ball
+                pu.delete()
+                self.powerups.remove(pu)
+
         self.check_collisions()
         num_bricks = len(self.canvas.find_withtag('brick'))
 
         if num_bricks == 0: 
-            # LANJUT KE LEVEL BERIKUTNYA
             self.ball.speed = None
+            self.ball.reset_super()
             self.level += 1
             self.save_high_score() 
             
-            # FIX: Hapus teks lama dan simpan teks baru ke self.text
             if hasattr(self, 'text'):
                 self.canvas.delete(self.text)
-            self.text = self.draw_text(self.width/2, 200, f'Level {self.level} Unlocked!', '35', '#2ecc71')
+            self.text = self.draw_text(self.width/2, 300, f'Level {self.level} Unlocked!', '35', '#a3be8c')
             
             self.after(2000, self.setup_level)
             self.after(2000, self.setup_game)
         
         elif self.ball.get_position()[3] >= self.height: 
-            # MATI / BOLA JATUH
             self.ball.speed = None
+            self.ball.reset_super()
             self.lives -= 1
             self.update_hud()
             
             if self.lives < 0:
-                # GAME OVER
                 self.save_high_score()
-                
-                # Bersihkan layar sebelum memunculkan Game Over
                 if hasattr(self, 'text'):
                     self.canvas.delete(self.text)
                     
-                self.draw_text(self.width/2, 180, 'GAME OVER', '40', '#e74c3c')
-                self.draw_text(self.width/2, 230, f'Your Score: {self.score}', '20', 'white')
-                self.draw_text(self.width/2, 260, f'Highest Score: {self.high_score}', '20', '#f1c40f')
+                self.draw_text(self.width/2, 260, 'GAME OVER', '50', '#bf616a')
+                self.draw_text(self.width/2, 330, f'Your Score: {self.score}', '25', '#cdd6f4')
+                self.draw_text(self.width/2, 370, f'Highest Score: {self.high_score}', '20', '#ebcb8b')
             else:
                 self.after(1000, self.setup_game)
         else:
@@ -309,23 +369,34 @@ class Game(tk.Frame):
 
         for obj in objects:
             if isinstance(obj, Brick):
-                self.score += 10 # Poin standar per benturan
-                self.update_hud()
-                if obj.hits == 0:
-                    self.score += obj.points # Poin bonus saat blok pecah
-                    self.update_hud()
+                # FIX: Ambil posisi bata SEBELUM bata dipukul/dihapus
+                b_coords = obj.get_position() 
+                
+                is_destroyed = obj.hit(self.ball.damage)
+                self.score += (10 * self.ball.damage)
+                
+                if is_destroyed:
+                    self.trigger_shake()
+                    self.score += obj.points 
                     
-                    # Update high score secara real-time jika terlampaui
-                    if self.score > self.high_score:
-                        self.high_score = self.score 
-                        self.update_hud()
-
+                    # 15% Peluang menjatuhkan Power-Up Biru
+                    if random.random() < 0.15: 
+                        # Gunakan b_coords yang sudah disimpan sebelumnya
+                        px = (b_coords[0] + b_coords[2]) / 2
+                        py = (b_coords[1] + b_coords[3]) / 2
+                        new_powerup = PowerUp(self.canvas, px, py)
+                        self.powerups.append(new_powerup)
+                        
                     del self.items[obj.item]
+                    
+                if self.score > self.high_score:
+                    self.high_score = self.score
+                self.update_hud()
 
 
 if __name__ == '__main__':
     root = tk.Tk()
-    root.title('Pro Breakout - Definitive Edition')
+    root.title('Pro Breakout - Minimalist Edition')
     root.resizable(False, False)
     game = Game(root)
     game.mainloop()

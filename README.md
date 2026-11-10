@@ -1,13 +1,8 @@
-# Pro Breakout - Minimalist Edition
-
-**Pro Breakout** adalah game klasik pemecah balok (*brick breaker*) yang dibangun murni menggunakan Python dan pustaka antarmuka grafis Tkinter. Versi "Minimalist Edition" ini merupakan perombakan total dari versi dasar, dirancang ulang untuk memberikan pengalaman bermain yang lebih modern, mulus, dan menantang. 
-
+# Brick Breaker - Minimalist Edition
 ![Screenshot Gameplay Pro Breakout Level 2](1.png)
 
-## ✨ Apa Saja yang Baru (Fitur Modifikasi)
-
-Game ini telah dimodifikasi secara signifikan dari *source code* aslinya untuk mencapai nilai dan performa maksimal. Berikut adalah daftar peningkatannya:
-
+## Fitur Yang Di Tambahkan
+Game ini telah dimodifikasi secara signifikan dari *source code* aslinya.
 *   **Tema Minimalis & Jendela Lebih Luas:** Area bermain diperluas menjadi 900x600 piksel dengan desain antarmuka datar (*flat design*), tanpa garis tepi, dan menggunakan palet warna pastel di atas latar belakang *Dark Navy* yang elegan.
 *   **Pergerakan *Paddle* Super Mulus (Anti-Lag):** Logika pergerakan papan telah dirombak. Tidak lagi bergantung pada *key-repeat rate* bawaan sistem operasi, melainkan menggunakan sistem deteksi `<KeyPress>` dan `<KeyRelease>` di dalam *game loop*, menghasilkan pergerakan responsif yang setara dengan game profesional.
 *   **Sistem Level Dinamis (Array 2D):** Game kini memiliki sistem progres level tak terbatas dengan 4 pola susunan balok yang unik: Papan Catur, Monster/Alien, Piramida, dan Bentuk Hati.
@@ -18,7 +13,6 @@ Game ini telah dimodifikasi secara signifikan dari *source code* aslinya untuk m
 *   **Optimasi Memori (Memory Cleanup):** Menutup celah kebocoran memori (memory leak) dengan memastikan objek balok yang hancur dihapus sepenuhnya dari *dictionary* penyimpanan sistem.
 
 ## 🎮 Cara Bermain
-
 1.  Jalankan file Python utama (`Modified.py` atau nama file Anda).
 2.  Tekan tombol **[Space]** untuk melepaskan bola dan memulai permainan.
 3.  Gunakan tombol **[Panah Kiri]** dan **[Panah Kanan]** di *keyboard* untuk menggerakkan papan.
